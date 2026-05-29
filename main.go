@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/liranbh7/huh/internal/binary"
 	"github.com/liranbh7/huh/internal/classify"
 	"github.com/liranbh7/huh/internal/device"
 	"github.com/liranbh7/huh/internal/pid"
@@ -58,7 +59,16 @@ func main() {
 			print.Device(r)
 			printed++
 		case classify.Binary:
-			printError(fmt.Errorf("binary resolver not yet implemented"))
+			r, err := binary.Resolve(input)
+			if err != nil {
+				if len(types) == 1 {
+					printError(err)
+				}
+				continue
+			}
+			sep(printed)
+			print.Binary(r)
+			printed++
 		case classify.Unknown:
 			printError(fmt.Errorf("huh: don't know what %q is", input))
 		}

@@ -3,8 +3,10 @@ package print
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/liranbh7/huh/internal/binary"
 	"github.com/liranbh7/huh/internal/device"
 	"github.com/liranbh7/huh/internal/format"
 	"github.com/liranbh7/huh/internal/pid"
@@ -68,6 +70,29 @@ func Device(r *device.Result) {
 		format.Row{Label: "SMART", Value: r.Smart},
 	)
 	format.Print(title, rows)
+}
+
+// Binary prints a binary.Result to stdout.
+func Binary(r *binary.Result) {
+	rows := []format.Row{
+		{Label: "Path", Value: r.Path},
+		{Label: "Description", Value: r.Description},
+		{Label: "Size", Value: format.Bytes(r.Size)},
+		{Label: "Mode", Value: r.Mode},
+		{Label: "Owner", Value: fmtOwner(r.Owner, r.Group)},
+		{Label: "Libs", Value: fmtLibs(r.LinkedLibs)},
+	}
+	format.Print(fmt.Sprintf("BINARY %s", r.Name), rows)
+}
+
+func fmtLibs(libs []string) string {
+	if libs == nil {
+		return ""
+	}
+	if len(libs) == 0 {
+		return "static"
+	}
+	return strings.Join(libs, ", ")
 }
 
 func deviceTitlePrefix(fileType string) string {
