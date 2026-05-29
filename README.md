@@ -4,6 +4,17 @@ A Linux terminal command that tells you what any given thing actually is.
 
 No flags, no manuals needed — just `huh <thing>` and get a human-readable summary.
 
+## Installation
+
+**Requirements:** Go 1.21+
+
+```bash
+git clone https://github.com/liranbh7/huh
+cd huh
+make build
+sudo mv bin/huh /usr/local/bin/
+```
+
 ## Usage
 
 ```
