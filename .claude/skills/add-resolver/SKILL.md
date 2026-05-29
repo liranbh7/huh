@@ -17,4 +17,9 @@ The user wants to add a new resolver named `$ARGUMENTS`.
 
 4. Update the README.md resolver list if this is a new type not already mentioned.
 
+5. Add a `Makefile` target for the resolver (or update the existing `Makefile` if one exists):
+   - A `build` target that compiles the binary to `./huh`
+   - A `test` target that runs `go test ./...`
+   - A `lint` target that runs the linter (e.g. `go vet ./...`)
+
 Follow Go standard library only — no third-party runtime imports. Use conventional commit style for any commit messages.
