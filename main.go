@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/liranbh7/huh/internal/classify"
+	"github.com/liranbh7/huh/internal/pid"
 	"github.com/liranbh7/huh/internal/port"
 )
 
@@ -24,7 +25,11 @@ func main() {
 		}
 		printPort(r)
 	case classify.PID:
-		fatal(fmt.Errorf("pid resolver not yet implemented"))
+		r, err := pid.Resolve(input)
+		if err != nil {
+			fatal(err)
+		}
+		printPID(r)
 	case classify.ProcessName:
 		fatal(fmt.Errorf("process resolver not yet implemented"))
 	case classify.Path:
@@ -33,6 +38,35 @@ func main() {
 		fatal(fmt.Errorf("binary resolver not yet implemented"))
 	default:
 		fatal(fmt.Errorf("huh: don't know what %q is", input))
+	}
+}
+
+func printPID(r *pid.Result) {
+	fmt.Printf("PID %d\n", r.PID)
+	fmt.Printf("  Process : %s\n", r.Process)
+	if r.User != "" {
+		fmt.Printf("  User    : %s\n", r.User)
+	}
+	if r.State != "" {
+		fmt.Printf("  State   : %s\n", r.State)
+	}
+	if r.Command != "" {
+		fmt.Printf("  Command : %s\n", r.Command)
+	}
+	if r.Exe != "" {
+		fmt.Printf("  Exe     : %s\n", r.Exe)
+	}
+	if r.CWD != "" {
+		fmt.Printf("  CWD     : %s\n", r.CWD)
+	}
+	if r.MemoryRSS > 0 {
+		fmt.Printf("  Memory  : %s\n", pid.FormatMemory(r.MemoryRSS))
+	}
+	if r.FDCount >= 0 {
+		fmt.Printf("  FDs     : %d\n", r.FDCount)
+	}
+	if r.StartedAgo > 0 {
+		fmt.Printf("  Started : %s ago\n", fmtDuration(r.StartedAgo))
 	}
 }
 
