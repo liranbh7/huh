@@ -3,6 +3,7 @@ package print
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/liranbh7/huh/internal/format"
 	"github.com/liranbh7/huh/internal/pid"
 	"github.com/liranbh7/huh/internal/port"
+	"github.com/liranbh7/huh/internal/processname"
 )
 
 // PID prints a pid.Result to stdout.
@@ -83,6 +85,33 @@ func Binary(r *binary.Result) {
 		{Label: "Libs", Value: fmtLibs(r.LinkedLibs)},
 	}
 	format.Print(fmt.Sprintf("BINARY %s", r.Name), rows)
+}
+
+// ProcessName prints a processname.Result to stdout.
+func ProcessName(r *processname.Result) {
+	var pids []string
+	for _, inst := range r.Instances {
+		pids = append(pids, strconv.Itoa(inst.PID))
+	}
+
+	var ports []string
+	for _, p := range r.Ports {
+		ports = append(ports, fmt.Sprintf(":%d", p))
+	}
+
+	title := "PROCESS " + r.Name
+	if len(r.Instances) > 1 {
+		title = fmt.Sprintf("PROCESS %s (%d instances)", r.Name, len(r.Instances))
+	}
+
+	rows := []format.Row{
+		{Label: "Exe", Value: r.Exe},
+		{Label: "Service", Value: r.Service},
+		{Label: "PIDs", Value: strings.Join(pids, ", ")},
+		{Label: "Ports", Value: strings.Join(ports, ", ")},
+		{Label: "Logs", Value: r.LogsCmd},
+	}
+	format.Print(title, rows)
 }
 
 func fmtLibs(libs []string) string {

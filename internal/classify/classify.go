@@ -70,7 +70,11 @@ func Classify(input string) []Type {
 	}
 
 	if _, err := exec.LookPath(input); err == nil {
-		return []Type{Binary}
+		types := []Type{Binary}
+		if isRunningProcess(input) {
+			types = append(types, ProcessName)
+		}
+		return types
 	}
 
 	if isRunningProcess(input) {

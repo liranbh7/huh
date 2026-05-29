@@ -38,8 +38,14 @@ func TestClassify_Path(t *testing.T) {
 func TestClassify_Binary(t *testing.T) {
 	// "sh" is guaranteed to exist on any POSIX system.
 	got := Classify("sh")
-	if len(got) != 1 || got[0] != Binary {
-		t.Errorf("Classify(\"sh\") = %v, want [binary]", got)
+	hasBinary := false
+	for _, ty := range got {
+		if ty == Binary {
+			hasBinary = true
+		}
+	}
+	if !hasBinary {
+		t.Errorf("Classify(\"sh\") = %v, want Binary to be included", got)
 	}
 }
 

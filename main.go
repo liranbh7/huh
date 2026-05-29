@@ -11,6 +11,7 @@ import (
 	"github.com/liranbh7/huh/internal/pid"
 	"github.com/liranbh7/huh/internal/port"
 	"github.com/liranbh7/huh/internal/print"
+	"github.com/liranbh7/huh/internal/processname"
 )
 
 func main() {
@@ -41,7 +42,13 @@ func main() {
 			print.PID(r)
 			printed++
 		case classify.ProcessName:
-			printError(fmt.Errorf("process resolver not yet implemented"))
+			r, err := processname.Resolve(input)
+			if err != nil {
+				continue
+			}
+			sep(printed)
+			print.ProcessName(r)
+			printed++
 		case classify.Path:
 			r, err := device.Resolve(input)
 			if err != nil {
