@@ -66,7 +66,7 @@ func main() {
 			print.Binary(r)
 			printed++
 		case classify.Unknown:
-			printError(fmt.Errorf("huh: don't know what %q is", input))
+			printError(fmt.Errorf("don't know what %q is", input))
 		}
 	}
 
@@ -79,7 +79,7 @@ func main() {
 			typesStr = append(typesStr, t.String())
 		}
 
-		printError(fmt.Errorf("huh: no results found for %q in [%v]", input, strings.Join(typesStr, ", ")))
+		printError(fmt.Errorf("no results found for %q in [%v]", input, strings.Join(typesStr, ", ")))
 
 	}
 }
