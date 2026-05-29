@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liranbh7/huh/internal/binary"
-	"github.com/liranbh7/huh/internal/device"
-	"github.com/liranbh7/huh/internal/format"
-	"github.com/liranbh7/huh/internal/pid"
-	"github.com/liranbh7/huh/internal/port"
-	"github.com/liranbh7/huh/internal/processname"
+	"github.com/liranbh7/huh/src/binary"
+	"github.com/liranbh7/huh/src/device"
+	"github.com/liranbh7/huh/src/format"
+	"github.com/liranbh7/huh/src/pid"
+	"github.com/liranbh7/huh/src/port"
+	"github.com/liranbh7/huh/src/processname"
 )
 
 // PID prints a pid.Result to stdout.

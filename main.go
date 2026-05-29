@@ -5,13 +5,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/liranbh7/huh/internal/binary"
-	"github.com/liranbh7/huh/internal/classify"
-	"github.com/liranbh7/huh/internal/device"
-	"github.com/liranbh7/huh/internal/pid"
-	"github.com/liranbh7/huh/internal/port"
-	"github.com/liranbh7/huh/internal/print"
-	"github.com/liranbh7/huh/internal/processname"
+	"github.com/liranbh7/huh/src/binary"
+	"github.com/liranbh7/huh/src/classify"
+	"github.com/liranbh7/huh/src/device"
+	"github.com/liranbh7/huh/src/pid"
+	"github.com/liranbh7/huh/src/port"
+	"github.com/liranbh7/huh/src/print"
+	"github.com/liranbh7/huh/src/processname"
 )
 
 func main() {
