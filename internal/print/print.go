@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/liranbh7/huh/internal/device"
 	"github.com/liranbh7/huh/internal/format"
 	"github.com/liranbh7/huh/internal/pid"
 	"github.com/liranbh7/huh/internal/port"
@@ -36,6 +37,69 @@ func Port(r *port.Result) {
 		{Label: "Started", Value: fmtStarted(r.StartedAgo)},
 	}
 	format.Print(fmt.Sprintf("PORT %d", r.Port), rows)
+}
+
+// Device prints a device.Result to stdout.
+func Device(r *device.Result) {
+	title := fmt.Sprintf("%s %s", deviceTitlePrefix(r.FileType), r.Path)
+
+	typeLabel := r.FileType
+	if r.Model != "" {
+		typeLabel = fmt.Sprintf("%s (%s)", r.FileType, r.Model)
+	}
+
+	rows := []format.Row{
+		{Label: "Type", Value: typeLabel},
+	}
+	if r.BlockSize != "" {
+		rows = append(rows, format.Row{Label: "Size", Value: r.BlockSize})
+	} else if r.Size > 0 {
+		rows = append(rows, format.Row{Label: "Size", Value: format.Bytes(r.Size)})
+	}
+	rows = append(rows,
+		format.Row{Label: "Mode", Value: r.Mode},
+		format.Row{Label: "Owner", Value: fmtOwner(r.Owner, r.Group)},
+		format.Row{Label: "Modified", Value: fmtModified(r.Modified)},
+		format.Row{Label: "Target", Value: r.Symlink},
+		format.Row{Label: "Mounts", Value: r.Mounts},
+		format.Row{Label: "Mount", Value: r.MountPoint},
+		format.Row{Label: "Device", Value: r.Device},
+		format.Row{Label: "Filesystem", Value: r.Filesystem},
+		format.Row{Label: "SMART", Value: r.Smart},
+	)
+	format.Print(title, rows)
+}
+
+func deviceTitlePrefix(fileType string) string {
+	switch fileType {
+	case "file":
+		return "FILE"
+	case "directory":
+		return "DIR"
+	case "block device", "char device":
+		return "DEVICE"
+	case "symlink":
+		return "SYMLINK"
+	default:
+		return "PATH"
+	}
+}
+
+func fmtOwner(owner, group string) string {
+	if owner == "" {
+		return ""
+	}
+	if group == "" {
+		return owner
+	}
+	return owner + ":" + group
+}
+
+func fmtModified(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format("2006-01-02 15:04")
 }
 
 func fmtStarted(d time.Duration) string {

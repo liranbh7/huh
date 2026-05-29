@@ -55,6 +55,20 @@ func Duration(d time.Duration) string {
 	}
 }
 
+// Bytes returns a human-readable string for a byte count.
+func Bytes(n int64) string {
+	switch {
+	case n >= 1<<30:
+		return fmt.Sprintf("%.1f GB", float64(n)/(1<<30))
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1f MB", float64(n)/(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%.1f KB", float64(n)/(1<<10))
+	default:
+		return fmt.Sprintf("%d B", n)
+	}
+}
+
 // Memory returns a human-readable string for a kilobyte value.
 func Memory(kb int64) string {
 	switch {

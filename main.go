@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/liranbh7/huh/internal/classify"
+	"github.com/liranbh7/huh/internal/device"
 	"github.com/liranbh7/huh/internal/pid"
 	"github.com/liranbh7/huh/internal/port"
 	"github.com/liranbh7/huh/internal/print"
@@ -46,7 +47,16 @@ func main() {
 		case classify.ProcessName:
 			printError(fmt.Errorf("process resolver not yet implemented"))
 		case classify.Path:
-			printError(fmt.Errorf("device/path resolver not yet implemented"))
+			r, err := device.Resolve(input)
+			if err != nil {
+				if len(types) == 1 {
+					printError(err)
+				}
+				continue
+			}
+			sep(printed)
+			print.Device(r)
+			printed++
 		case classify.Binary:
 			printError(fmt.Errorf("binary resolver not yet implemented"))
 		case classify.Unknown:
