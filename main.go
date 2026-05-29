@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/liranbh7/huh/internal/classify"
 	"github.com/liranbh7/huh/internal/pid"
 	"github.com/liranbh7/huh/internal/port"
+	"github.com/liranbh7/huh/internal/print"
 )
 
 func main() {
@@ -16,95 +16,54 @@ func main() {
 		os.Exit(1)
 	}
 	input := os.Args[1]
+	types := classify.Classify(input)
 
-	switch classify.Classify(input) {
-	case classify.Port:
-		r, err := port.Resolve(input)
-		if err != nil {
-			fatal(err)
+	printed := 0
+	for _, t := range types {
+		switch t {
+		case classify.Port:
+			r, err := port.Resolve(input)
+			if err != nil {
+				if len(types) == 1 { // only print the error if this is the only type we found
+					printError(err)
+				}
+				continue
+			}
+			sep(printed)
+			print.Port(r)
+			printed++
+		case classify.PID:
+			r, err := pid.Resolve(input)
+			if err != nil {
+				if len(types) == 1 { // only print the error if this is the only type we found
+					printError(err)
+				}
+				continue
+			}
+			sep(printed)
+			print.PID(r)
+			printed++
+		case classify.ProcessName:
+			printError(fmt.Errorf("process resolver not yet implemented"))
+		case classify.Path:
+			printError(fmt.Errorf("device/path resolver not yet implemented"))
+		case classify.Binary:
+			printError(fmt.Errorf("binary resolver not yet implemented"))
+		case classify.Unknown:
+			printError(fmt.Errorf("huh: don't know what %q is", input))
 		}
-		printPort(r)
-	case classify.PID:
-		r, err := pid.Resolve(input)
-		if err != nil {
-			fatal(err)
-		}
-		printPID(r)
-	case classify.ProcessName:
-		fatal(fmt.Errorf("process resolver not yet implemented"))
-	case classify.Path:
-		fatal(fmt.Errorf("device/path resolver not yet implemented"))
-	case classify.Binary:
-		fatal(fmt.Errorf("binary resolver not yet implemented"))
-	default:
-		fatal(fmt.Errorf("huh: don't know what %q is", input))
 	}
 }
 
-func printPID(r *pid.Result) {
-	fmt.Printf("PID %d\n", r.PID)
-	fmt.Printf("  Process : %s\n", r.Process)
-	if r.User != "" {
-		fmt.Printf("  User    : %s\n", r.User)
-	}
-	if r.State != "" {
-		fmt.Printf("  State   : %s\n", r.State)
-	}
-	if r.Command != "" {
-		fmt.Printf("  Command : %s\n", r.Command)
-	}
-	if r.Exe != "" {
-		fmt.Printf("  Exe     : %s\n", r.Exe)
-	}
-	if r.CWD != "" {
-		fmt.Printf("  CWD     : %s\n", r.CWD)
-	}
-	if r.MemoryRSS > 0 {
-		fmt.Printf("  Memory  : %s\n", pid.FormatMemory(r.MemoryRSS))
-	}
-	if r.FDCount >= 0 {
-		fmt.Printf("  FDs     : %d\n", r.FDCount)
-	}
-	if r.StartedAgo > 0 {
-		fmt.Printf("  Started : %s ago\n", fmtDuration(r.StartedAgo))
+// sep prints a blank line between multiple results.
+func sep(printed int) {
+	if printed > 0 {
+		fmt.Println()
 	}
 }
 
-func printPort(r *port.Result) {
-	fmt.Printf("PORT %d\n", r.Port)
-	fmt.Printf("  Process : %s (pid %d)\n", r.Process, r.PID)
-	if r.User != "" {
-		fmt.Printf("  User    : %s\n", r.User)
-	}
-	if r.Command != "" {
-		fmt.Printf("  Command : %s\n", r.Command)
-	}
-	if r.CWD != "" {
-		fmt.Printf("  CWD     : %s\n", r.CWD)
-	}
-	if r.StartedAgo > 0 {
-		fmt.Printf("  Started : %s ago\n", fmtDuration(r.StartedAgo))
-	}
-}
-
-// fmtDuration formats a duration as "Xd Xh Xm Xs", omitting leading zero units.
-func fmtDuration(d time.Duration) string {
-	d = d.Round(time.Second)
-	days := int(d.Hours()) / 24
-	hours := int(d.Hours()) % 24
-	mins := int(d.Minutes()) % 60
-	secs := int(d.Seconds()) % 60
-
-	switch {
-	case days > 0:
-		return fmt.Sprintf("%dd %dh", days, hours)
-	case hours > 0:
-		return fmt.Sprintf("%dh %dm", hours, mins)
-	case mins > 0:
-		return fmt.Sprintf("%dm %ds", mins, secs)
-	default:
-		return fmt.Sprintf("%ds", secs)
-	}
+func printError(err error) {
+	fmt.Fprintf(os.Stderr, "huh: %s\n", err)
 }
 
 func fatal(err error) {

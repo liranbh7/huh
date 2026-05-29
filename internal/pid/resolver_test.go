@@ -60,26 +60,6 @@ func TestStartedAgoPID1(t *testing.T) {
 	}
 }
 
-func TestFormatMemory(t *testing.T) {
-	tests := []struct {
-		kb   int64
-		want string
-	}{
-		{512, "512 KB"},
-		{1024, "1.0 MB"},
-		{2048, "2.0 MB"},
-		{1536, "1.5 MB"},
-		{1024 * 1024, "1.0 GB"},
-		{1024 * 1024 * 2, "2.0 GB"},
-	}
-	for _, tt := range tests {
-		got := FormatMemory(tt.kb)
-		if got != tt.want {
-			t.Errorf("FormatMemory(%d) = %q, want %q", tt.kb, got, tt.want)
-		}
-	}
-}
-
 func TestReadState(t *testing.T) {
 	// Current process must have a valid state.
 	state := readState(os.Getpid())

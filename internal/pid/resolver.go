@@ -200,15 +200,3 @@ func uidToName(uid string) string {
 	_ = scanner.Err()
 	return uid
 }
-
-// FormatMemory returns a human-readable string for a kilobyte value.
-func FormatMemory(kb int64) string {
-	switch {
-	case kb >= 1024*1024:
-		return fmt.Sprintf("%.1f GB", float64(kb)/1024/1024)
-	case kb >= 1024:
-		return fmt.Sprintf("%.1f MB", float64(kb)/1024)
-	default:
-		return fmt.Sprintf("%d KB", kb)
-	}
-}

@@ -39,31 +39,35 @@ func (t Type) String() string {
 	}
 }
 
-// Classify returns the most likely Type for input.
-func Classify(input string) Type {
+// Classify returns all Types that could match input. Numeric inputs may match
+// both PID and Port when the number is an active process and within port range.
+func Classify(input string) []Type {
 	if n, err := strconv.Atoi(input); err == nil {
-		// A running process with this PID takes priority over a port with the same number.
+		var types []Type
 		if _, err := os.Stat(fmt.Sprintf("/proc/%d", n)); err == nil {
-			return PID
+			types = append(types, PID)
 		}
 		if n >= 1 && n <= 65535 {
-			return Port
+			types = append(types, Port)
+		}
+		if len(types) > 0 {
+			return types
 		}
 	}
 
 	if strings.HasPrefix(input, "/") || strings.HasPrefix(input, "./") || strings.HasPrefix(input, "../") {
-		return Path
+		return []Type{Path}
 	}
 
 	if _, err := exec.LookPath(input); err == nil {
-		return Binary
+		return []Type{Binary}
 	}
 
 	if isRunningProcess(input) {
-		return ProcessName
+		return []Type{ProcessName}
 	}
 
-	return Unknown
+	return []Type{Unknown}
 }
 
 // isRunningProcess reports whether any /proc/*/comm matches name exactly.
