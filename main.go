@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/liranbh7/huh/internal/binary"
 	"github.com/liranbh7/huh/internal/classify"
@@ -26,9 +27,6 @@ func main() {
 		case classify.Port:
 			r, err := port.Resolve(input)
 			if err != nil {
-				if len(types) == 1 { // only print the error if this is the only type we found
-					printError(err)
-				}
 				continue
 			}
 			sep(printed)
@@ -37,9 +35,6 @@ func main() {
 		case classify.PID:
 			r, err := pid.Resolve(input)
 			if err != nil {
-				if len(types) == 1 { // only print the error if this is the only type we found
-					printError(err)
-				}
 				continue
 			}
 			sep(printed)
@@ -50,9 +45,6 @@ func main() {
 		case classify.Path:
 			r, err := device.Resolve(input)
 			if err != nil {
-				if len(types) == 1 {
-					printError(err)
-				}
 				continue
 			}
 			sep(printed)
@@ -61,9 +53,6 @@ func main() {
 		case classify.Binary:
 			r, err := binary.Resolve(input)
 			if err != nil {
-				if len(types) == 1 {
-					printError(err)
-				}
 				continue
 			}
 			sep(printed)
@@ -72,6 +61,19 @@ func main() {
 		case classify.Unknown:
 			printError(fmt.Errorf("huh: don't know what %q is", input))
 		}
+	}
+
+	// if we found some types for this input but none of them yielded results, print an error with the types we tried
+	// if no types were found, the error will already have been printed by classify.Unknown, so we don't need to print another error in that case
+	if printed == 0 && len(types) > 0 && types[0] != classify.Unknown {
+		// types print is in format of [port, pid]
+		var typesStr []string
+		for _, t := range types {
+			typesStr = append(typesStr, t.String())
+		}
+
+		printError(fmt.Errorf("huh: no results found for %q in [%v]", input, strings.Join(typesStr, ", ")))
+
 	}
 }
 

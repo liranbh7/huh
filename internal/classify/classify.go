@@ -39,17 +39,27 @@ func (t Type) String() string {
 	}
 }
 
+// PORT and PID min/max values
+const (
+	MinPort = 1
+	MaxPort = 65535
+	MinPID  = 1
+	MaxPID  = 1 << 22 //potentially could be up to 2^22 on 64-bit Linux
+)
+
 // Classify returns all Types that could match input. Numeric inputs may match
 // both PID and Port when the number is an active process and within port range.
 func Classify(input string) []Type {
 	if n, err := strconv.Atoi(input); err == nil {
 		var types []Type
-		if _, err := os.Stat(fmt.Sprintf("/proc/%d", n)); err == nil {
-			types = append(types, PID)
-		}
-		if n >= 1 && n <= 65535 {
+		if n >= MinPort && n <= MaxPort {
 			types = append(types, Port)
 		}
+
+		if n >= MinPID && n <= MaxPID {
+			types = append(types, PID)
+		}
+
 		if len(types) > 0 {
 			return types
 		}

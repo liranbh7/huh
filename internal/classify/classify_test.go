@@ -1,7 +1,6 @@
 package classify
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -67,24 +66,27 @@ func TestClassify_NumericPID(t *testing.T) {
 }
 
 func TestClassify_NumericPortRange(t *testing.T) {
-	// Use a port number that is almost certainly not a live PID (65000).
-	if _, err := os.Stat(fmt.Sprintf("/proc/%d", 65000)); err == nil {
-		t.Skip("PID 65000 exists; skipping pure-port test")
-	}
+	// 65000 is in port range (1–65535) and also in PID range, so both are returned.
 	got := Classify("65000")
-	if len(got) != 1 || got[0] != Port {
-		t.Errorf("Classify(\"65000\") = %v, want [port]", got)
+	hasPort, hasPID := false, false
+	for _, ty := range got {
+		if ty == Port {
+			hasPort = true
+		}
+		if ty == PID {
+			hasPID = true
+		}
+	}
+	if !hasPort || !hasPID {
+		t.Errorf("Classify(\"65000\") = %v, want [port pid]", got)
 	}
 }
 
 func TestClassify_NumericOutOfPortRange(t *testing.T) {
-	// 99999 is above 65535 and unlikely to be a PID, but guard anyway.
-	if _, err := os.Stat("/proc/99999"); err == nil {
-		t.Skip("PID 99999 exists; skipping")
-	}
+	// 99999 exceeds MaxPort (65535) but is within MaxPID, so only PID is returned.
 	got := Classify("99999")
-	if len(got) != 1 || got[0] != Unknown {
-		t.Errorf("Classify(\"99999\") = %v, want [unknown]", got)
+	if len(got) != 1 || got[0] != PID {
+		t.Errorf("Classify(\"99999\") = %v, want [pid]", got)
 	}
 }
 
