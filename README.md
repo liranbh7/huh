@@ -18,8 +18,20 @@ sudo mv bin/huh /usr/local/bin/
 ## Usage
 
 ```
-huh <port | pid | process name | file path | device | binary | ip>
+huh <input>
 ```
+
+`<input>` can be:
+
+| Input        | Example           |
+| ------------ | ----------------- |
+| Port number  | `huh 80`          |
+| PID          | `huh 1234`        |
+| Process name | `huh nginx`       |
+| Device path  | `huh /dev/sda1`   |
+| Binary name  | `huh man`         |
+| IP address   | `huh 192.168.1.1` |
+
 
 ## Examples
 
@@ -83,13 +95,13 @@ BINARY rsync
 
 `huh` inspects the input and determines what kind of thing it is:
 
-| Input type    | Detection method                      | Info sources                           |
-| ------------- | ------------------------------------- | -------------------------------------- |
-| Port number   | Numeric, 1–65535                      | `/proc/net/tcp`, `ss`, `lsof`          |
-| PID           | Numeric, matches `/proc/<n>`          | `/proc/<pid>/status`, `cmdline`, `fd`  |
-| Process name  | String matching running process names | `/proc/*/comm`, `systemctl`            |
-| File / device | Path exists on filesystem             | `stat`, `lsblk`, `findmnt`, `smartctl` |
-| Binary        | Found in `$PATH`                      | `which`, `ldd`, `man`, `--version`     |
+| Input type    | Detection method                      | Info sources                             |
+| ------------- | ------------------------------------- | ---------------------------------------- |
+| Port number   | Numeric, 1–65535                      | `/proc/net/tcp`, `ss`, `lsof`            |
+| PID           | Numeric, matches `/proc/<n>`          | `/proc/<pid>/status`, `cmdline`, `fd`    |
+| Process name  | String matching running process names | `/proc/*/comm`, `systemctl`              |
+| File / device | Path exists on filesystem             | `stat`, `lsblk`, `findmnt`, `smartctl`   |
+| Binary        | Found in `$PATH`                      | `which`, `ldd`, `man`, `--version`       |
 | IP address    | Parses as IPv4 or IPv6                | `net.LookupAddr`, `/proc/net` interfaces |
 
 ## Goals
