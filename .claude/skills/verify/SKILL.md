@@ -4,20 +4,21 @@ description: Build the huh binary and run smoke tests against sample inputs to v
 disable-model-invocation: false
 ---
 
-1. Run `make build` (or `go build -o huh .` if no Makefile yet). Fix any build errors before continuing.
+1. Run `make build`. Fix any build errors before continuing. The binary is written to `./bin/huh`.
 
-2. Run `make test` (or `go test ./...`). Report any failures.
+2. Run `make test`. Report any failures.
 
-3. Run a quick smoke test against each implemented resolver type. For each, run `./huh <input>` and check that:
+3. Run a quick smoke test against each implemented resolver type. For each, run `./bin/huh <input>` and check that:
    - Output is non-empty and human-readable
    - No panic or error exit
    - Completes in under 500ms
 
    Sample inputs to try (skip any whose resolver isn't implemented yet):
-   - Port: `./huh 22`, `./huh 80`
-   - PID: `./huh 1`
-   - Process name: `./huh systemd`
-   - Binary: `./huh ls`
-   - Path: `./huh /dev/sda` (only if block device exists)
+   - Port: `./bin/huh 22`, `./bin/huh 80`
+   - PID: `./bin/huh 1`
+   - Process name: `./bin/huh systemd`
+   - Binary: `./bin/huh ls`
+   - Path: `./bin/huh /dev/sda` (only if block device exists)
+   - IP: `./bin/huh 127.0.0.1`
 
 4. Report what passed, what failed, and any unexpected output.
