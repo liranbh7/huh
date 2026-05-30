@@ -8,15 +8,16 @@ import (
 	"github.com/liranbh7/huh/src/binary"
 	"github.com/liranbh7/huh/src/classify"
 	"github.com/liranbh7/huh/src/device"
+	"github.com/liranbh7/huh/src/net/ip"
+	"github.com/liranbh7/huh/src/net/port"
 	"github.com/liranbh7/huh/src/pid"
-	"github.com/liranbh7/huh/src/port"
 	"github.com/liranbh7/huh/src/print"
 	"github.com/liranbh7/huh/src/processname"
 )
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: huh <port | pid | process | path | binary>\n")
+		fmt.Fprintf(os.Stderr, "usage: huh <port | pid | process | path | binary | ip>\n")
 		os.Exit(1)
 	}
 	input := os.Args[1]
@@ -64,6 +65,14 @@ func main() {
 			}
 			sep(printed)
 			print.Binary(r)
+			printed++
+		case classify.IP:
+			r, err := ip.Resolve(input)
+			if err != nil {
+				continue
+			}
+			sep(printed)
+			print.IP(r)
 			printed++
 		case classify.Unknown:
 			printError(fmt.Errorf("don't know what %q is", input))

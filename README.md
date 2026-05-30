@@ -18,7 +18,7 @@ sudo mv bin/huh /usr/local/bin/
 ## Usage
 
 ```
-huh <port | pid | process name | file path | device | binary>
+huh <port | pid | process name | file path | device | binary | ip>
 ```
 
 ## Examples
@@ -58,6 +58,16 @@ DEVICE /dev/sda
   SMART   : OK (last checked 3d ago)
 ```
 
+**IP address**
+```
+$ huh 8.8.8.8
+
+IP 8.8.8.8
+  Kind      : public
+  Version   : IPv4
+  Hostname  : dns.google
+```
+
 **Binary**
 ```
 $ huh rsync
@@ -80,6 +90,7 @@ BINARY rsync
 | Process name  | String matching running process names | `/proc/*/comm`, `systemctl`            |
 | File / device | Path exists on filesystem             | `stat`, `lsblk`, `findmnt`, `smartctl` |
 | Binary        | Found in `$PATH`                      | `which`, `ldd`, `man`, `--version`     |
+| IP address    | Parses as IPv4 or IPv6                | `net.LookupAddr`, `/proc/net` interfaces |
 
 ## Goals
 

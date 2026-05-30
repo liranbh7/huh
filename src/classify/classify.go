@@ -4,6 +4,7 @@ package classify
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -20,6 +21,7 @@ const (
 	ProcessName      // string matching a running process comm
 	Path             // starts with / or ./ and exists on the filesystem
 	Binary           // name found in $PATH
+	IP               // IPv4 or IPv6 address
 )
 
 func (t Type) String() string {
@@ -34,6 +36,8 @@ func (t Type) String() string {
 		return "path"
 	case Binary:
 		return "binary"
+	case IP:
+		return "ip"
 	default:
 		return "unknown"
 	}
@@ -67,6 +71,10 @@ func Classify(input string) []Type {
 
 	if strings.HasPrefix(input, "/") || strings.HasPrefix(input, "./") || strings.HasPrefix(input, "../") {
 		return []Type{Path}
+	}
+
+	if net.ParseIP(input) != nil {
+		return []Type{IP}
 	}
 
 	if _, err := exec.LookPath(input); err == nil {

@@ -10,8 +10,9 @@ import (
 	"github.com/liranbh7/huh/src/binary"
 	"github.com/liranbh7/huh/src/device"
 	"github.com/liranbh7/huh/src/format"
+	"github.com/liranbh7/huh/src/net/ip"
+	"github.com/liranbh7/huh/src/net/port"
 	"github.com/liranbh7/huh/src/pid"
-	"github.com/liranbh7/huh/src/port"
 	"github.com/liranbh7/huh/src/processname"
 )
 
@@ -112,6 +113,29 @@ func ProcessName(r *processname.Result) {
 		{Label: "Logs", Value: r.LogsCmd},
 	}
 	format.Print(title, rows)
+}
+
+// IP prints an ip.Result to stdout.
+func IP(r *ip.Result) {
+	rows := []format.Row{
+		{Label: "Kind", Value: r.Kind},
+		{Label: "Version", Value: fmt.Sprintf("IPv%d", r.Version)},
+		{Label: "Hostname", Value: r.Hostname},
+		{Label: "Interface", Value: r.Interface},
+		{Label: "Listeners", Value: fmtListeners(r.Listeners)},
+	}
+	format.Print(fmt.Sprintf("IP %s", r.IP), rows)
+}
+
+func fmtListeners(listeners []ip.Listener) string {
+	if len(listeners) == 0 {
+		return ""
+	}
+	parts := make([]string, len(listeners))
+	for i, l := range listeners {
+		parts[i] = fmt.Sprintf(":%d %s (pid %d)", l.Port, l.Process, l.PID)
+	}
+	return strings.Join(parts, ", ")
 }
 
 func fmtLibs(libs []string) string {
