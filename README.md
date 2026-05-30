@@ -73,13 +73,13 @@ BINARY rsync
 
 `huh` inspects the input and determines what kind of thing it is:
 
-| Input type     | Detection method                      | Info sources                           |
-|----------------|---------------------------------------|----------------------------------------|
-| Port number    | Numeric, 1–65535                      | `/proc/net/tcp`, `ss`, `lsof`          |
-| PID            | Numeric, matches `/proc/<n>`          | `/proc/<pid>/status`, `cmdline`, `fd`  |
-| Process name   | String matching running process names | `/proc/*/comm`, `systemctl`            |
-| File / device  | Path exists on filesystem             | `stat`, `lsblk`, `findmnt`, `smartctl` |
-| Binary         | Found in `$PATH`                      | `which`, `ldd`, `man`, `--version`     |
+| Input type    | Detection method                      | Info sources                           |
+| ------------- | ------------------------------------- | -------------------------------------- |
+| Port number   | Numeric, 1–65535                      | `/proc/net/tcp`, `ss`, `lsof`          |
+| PID           | Numeric, matches `/proc/<n>`          | `/proc/<pid>/status`, `cmdline`, `fd`  |
+| Process name  | String matching running process names | `/proc/*/comm`, `systemctl`            |
+| File / device | Path exists on filesystem             | `stat`, `lsblk`, `findmnt`, `smartctl` |
+| Binary        | Found in `$PATH`                      | `which`, `ldd`, `man`, `--version`     |
 
 ## Goals
 
@@ -88,14 +88,19 @@ BINARY rsync
 - No external dependencies at runtime — single static binary
 - Human-readable output, not raw dump
 
-## Implementation plan
+## Linux compatibility
 
-1. Input classifier — determine what kind of thing was passed
-2. Port resolver — `/proc/net/tcp` + process lookup
-3. Process resolver — `/proc` walking + systemd integration
-4. Device resolver — `lsblk`, `findmnt`, SMART status
-5. Binary resolver — `$PATH` lookup, `ldd`, man page summary
-6. Output formatter — consistent, aligned output
+`huh` works on any Linux distro that provides `/proc`. Some resolvers depend on external tools that may not be present on every system:
+
+| Tool               | Used for                 | Availability                                                                              |
+| ------------------ | ------------------------ | ----------------------------------------------------------------------------------------- |
+| `lsblk`, `findmnt` | Device resolver          | Part of `util-linux`; present on most mainstream distros, may be absent on Alpine/BusyBox |
+| `smartctl`         | Device health (SMART)    | From `smartmontools`; often not installed by default                                      |
+| `systemctl`        | Process → service lookup | Systemd only; absent on Alpine, Void, Gentoo/OpenRC, etc.                                 |
+| `whatis`           | Binary man page summary  | From `man-db`; may be missing on minimal installs                                         |
+| `ldd`              | Binary linked libraries  | Part of glibc; present on virtually all distros                                           |
+
+Missing tools are detected at runtime via `PATH` lookup — the affected field is skipped rather than causing an error. Core functionality (port, PID, process name, binary path) works on any standard Linux system.
 
 ## Tech stack
 
