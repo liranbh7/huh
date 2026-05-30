@@ -4,6 +4,9 @@ A Linux terminal command that tells you what any given thing actually is.
 
 No flags, no manuals needed — just `huh <thing>` and get a human-readable summary.
 
+> For when you stare at a port number, a process name, or some mystery binary and think... *huh?*
+> Type it. `huh` figures out what it is, who owns it, and what it's doing — in under 500ms.
+
 ## Installation
 
 **Requirements:** Go 1.21+
