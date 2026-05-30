@@ -16,10 +16,11 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "usage: huh <port | pid | process | path | binary | ip>\n")
-		os.Exit(1)
+
+	if len(os.Args) != 2 || os.Args[1] == "-h" || os.Args[1] == "--help" {
+		help()
 	}
+
 	input := os.Args[1]
 	types := classify.Classify(input)
 
@@ -104,7 +105,31 @@ func printError(err error) {
 	fmt.Fprintf(os.Stderr, "huh: %s\n", err)
 }
 
-func fatal(err error) {
-	fmt.Fprintf(os.Stderr, "huh: %s\n", err)
+func help() {
+
+	helpString :=
+		`huh is a tool for resolving various types of input to their associated information. 
+It can resolve ports, PIDs, process names, device paths, binary paths, and IP addresses.
+
+Usage:
+	huh <input>
+
+Where <input> can be:
+	A port number (e.g. "80")
+	A PID (e.g. "1234")
+	A process name (e.g. "nginx")
+	A device path (e.g. "/dev/sda1")
+	A binary path (e.g. "man")
+	An IP address (e.g. "192.168.1.1")
+
+Examples:
+	huh 80
+	huh 1234
+	huh nginx
+	huh /dev/sda1
+	huh man
+	huh 192.168.1.1`
+
+	fmt.Fprintln(os.Stderr, helpString)
 	os.Exit(1)
 }
