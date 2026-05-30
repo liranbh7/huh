@@ -1,10 +1,12 @@
 .PHONY: build test lint
 
+SRC := src
+
 build:
-	go build -o bin/huh .
+	cd $(SRC) && go build -o ../bin/huh .
 
 test:
-	go test ./...
+	cd $(SRC) && go test ./...
 
 lint:
-	go vet ./...
+	cd $(SRC) && go vet ./...
