@@ -6,20 +6,36 @@ disable-model-invocation: false
 
 The user wants to add a new resolver named `$ARGUMENTS`.
 
-1. Create `internal/<resolver-name>/resolver.go` with:
-   - A `Resolve(input string) (*Result, error)` function
-   - A `Result` struct with at minimum a `Summary` string field
-   - A comment explaining what input types this resolver handles
+## 1. Create the resolver package
 
-2. Create `internal/<resolver-name>/resolver_test.go` with at least one table-driven test covering a happy path and an error case.
+Create `src/resolvers/<resolver-name>/resolver.go` with:
+- A `Resolve(input string) (*Result, error)` function
+- A `Result` struct with at minimum a `Summary` string field
+- A comment explaining what input types this resolver handles
 
-3. Wire the new resolver into the input classifier (`internal/classify/classify.go` or equivalent). If the classifier doesn't exist yet, note that it needs to be created.
+Create `src/resolvers/<resolver-name>/resolver_test.go` with at least one table-driven test covering a happy path and an error case.
 
-4. Update the README.md resolver list if this is a new type not already mentioned.
+Note: nested namespaces are fine when the resolver belongs to a logical group (e.g. `src/resolvers/net/port`, `src/resolvers/net/ip`).
 
-5. Add a `Makefile` target for the resolver (or update the existing `Makefile` if one exists):
-   - A `build` target that compiles the binary to `./huh`
-   - A `test` target that runs `go test ./...`
-   - A `lint` target that runs the linter (e.g. `go vet ./...`)
+## 2. Wire into the classifier
 
-Follow Go standard library only — no third-party runtime imports. Use conventional commit style for any commit messages.
+Edit `src/classify/classify.go`:
+- Add a new `Type` constant in the `const` block (e.g. `MyType`)
+- Add a `case MyType: return "mytype"` in `Type.String()`
+- Add detection logic in `Classify()` so inputs matching this type return `[]Type{MyType}`
+
+## 3. Wire into the dispatcher (main.go)
+
+Edit `src/main.go`:
+- Add an import for `"github.com/liranbh7/huh/src/resolvers/<resolver-name>"`
+- Add a `case classify.MyType:` branch in the switch that calls `<resolver>.Resolve(input)` and then `print.MyType(r)`
+
+## 4. Add a print function
+
+Edit `src/print/print.go`:
+- Add an import for the new resolver package
+- Add a `func MyType(r *myresolver.Result)` function that builds a `[]format.Row` and calls `format.Print(title, rows)`
+
+## 5. Verify
+
+Run `make build && make test` to confirm everything compiles and tests pass. Follow Go standard library only — no third-party runtime imports. Use conventional commit style for any commit messages.
