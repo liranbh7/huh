@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liranbh7/huh/src/net/port"
-	"github.com/liranbh7/huh/src/pid"
+	"github.com/liranbh7/huh/src/resolvers/net/port"
+	"github.com/liranbh7/huh/src/resolvers/pid"
 )
 
 // captureStdout runs f and returns everything written to os.Stdout.

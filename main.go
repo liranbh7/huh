@@ -5,14 +5,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/liranbh7/huh/src/binary"
 	"github.com/liranbh7/huh/src/classify"
-	"github.com/liranbh7/huh/src/device"
-	"github.com/liranbh7/huh/src/net/ip"
-	"github.com/liranbh7/huh/src/net/port"
-	"github.com/liranbh7/huh/src/pid"
 	"github.com/liranbh7/huh/src/print"
-	"github.com/liranbh7/huh/src/processname"
+	"github.com/liranbh7/huh/src/resolvers/binary"
+	"github.com/liranbh7/huh/src/resolvers/device"
+	"github.com/liranbh7/huh/src/resolvers/net/ip"
+	"github.com/liranbh7/huh/src/resolvers/net/port"
+	"github.com/liranbh7/huh/src/resolvers/pid"
+	"github.com/liranbh7/huh/src/resolvers/processname"
 )
 
 func main() {
