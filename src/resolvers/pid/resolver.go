@@ -22,6 +22,7 @@ type Result struct {
 	Exe        string
 	CWD        string
 	MemoryRSS  int64 // kilobytes
+	CPUPercent float64
 	FDCount    int
 	StartedAgo time.Duration
 }
@@ -44,6 +45,7 @@ func Resolve(input string) (*Result, error) {
 	r.Exe = readExe(pid)
 	r.CWD = readCWD(pid)
 	r.MemoryRSS = readMemoryRSS(pid)
+	r.CPUPercent = readCPUPercent(pid)
 	r.FDCount = countFDs(pid)
 	r.StartedAgo = readStartedAgo(pid)
 	r.Summary = fmt.Sprintf("pid %d — %s", pid, r.Process)
@@ -135,6 +137,54 @@ func readMemoryRSS(pid int) int64 {
 		}
 	}
 	return 0
+}
+
+// readCPUPercent returns the lifetime average CPU% for pid using /proc/<pid>/stat
+// and /proc/uptime. Returns 0 on any parse error.
+func readCPUPercent(pid int) float64 {
+	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+	if err != nil {
+		return 0
+	}
+	end := strings.LastIndex(string(data), ")")
+	if end < 0 {
+		return 0
+	}
+	fields := strings.Fields(string(data)[end+1:])
+	// fields[11]=utime, fields[12]=stime, fields[19]=starttime (ticks since boot)
+	if len(fields) < 20 {
+		return 0
+	}
+	utime, err := strconv.ParseUint(fields[11], 10, 64)
+	if err != nil {
+		return 0
+	}
+	stime, err := strconv.ParseUint(fields[12], 10, 64)
+	if err != nil {
+		return 0
+	}
+	starttime, err := strconv.ParseUint(fields[19], 10, 64)
+	if err != nil {
+		return 0
+	}
+	upData, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return 0
+	}
+	uptimeFields := strings.Fields(string(upData))
+	if len(uptimeFields) < 1 {
+		return 0
+	}
+	uptimeSec, err := strconv.ParseFloat(uptimeFields[0], 64)
+	if err != nil {
+		return 0
+	}
+	const clkTck = 100
+	elapsed := uptimeSec - float64(starttime)/clkTck
+	if elapsed <= 0 {
+		return 0
+	}
+	return float64(utime+stime) / clkTck / elapsed * 100
 }
 
 func countFDs(pid int) int {

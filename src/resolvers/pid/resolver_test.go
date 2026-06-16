@@ -67,3 +67,31 @@ func TestReadState(t *testing.T) {
 		t.Error("readState returned empty string for current process")
 	}
 }
+
+func TestReadCPUPercentPID1(t *testing.T) {
+	if _, err := os.Stat("/proc/1"); err != nil {
+		t.Skip("cannot access /proc/1")
+	}
+	pct := readCPUPercent(1)
+	if pct < 0 {
+		t.Errorf("readCPUPercent(1) = %f, want >= 0", pct)
+	}
+}
+
+func TestReadCPUPercentNonExistent(t *testing.T) {
+	// A non-existent PID must return 0, not panic.
+	pct := readCPUPercent(2147483647)
+	if pct != 0 {
+		t.Errorf("readCPUPercent(nonexistent) = %f, want 0", pct)
+	}
+}
+
+func TestResolveCurrentProcessCPU(t *testing.T) {
+	r, err := Resolve(strconv.Itoa(os.Getpid()))
+	if err != nil {
+		t.Fatalf("Resolve unexpectedly failed: %v", err)
+	}
+	if r.CPUPercent < 0 {
+		t.Errorf("CPUPercent = %f, want >= 0", r.CPUPercent)
+	}
+}

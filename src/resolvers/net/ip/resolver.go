@@ -21,6 +21,7 @@ type Result struct {
 	Hostname  string     // first result from reverse DNS, empty if none
 	Interface string     // local interface name if this IP is assigned to one
 	Listeners []Listener // TCP sockets in LISTEN state bound to this IP
+	Routes    []Route    // kernel routes that match this IP (IPv4 only)
 }
 
 // Listener is a single TCP port in LISTEN state bound to the IP.
@@ -28,6 +29,14 @@ type Listener struct {
 	Port    int
 	PID     int
 	Process string
+}
+
+// Route is a kernel routing table entry that covers the IP address.
+type Route struct {
+	Interface string
+	Network   string // CIDR notation, e.g. "192.168.1.0/24"
+	Gateway   string // empty if directly connected
+	Metric    int
 }
 
 // Resolve inspects the given IP address string and returns metadata about it.
@@ -50,6 +59,9 @@ func Resolve(input string) (*Result, error) {
 	r.Interface = localInterface(parsed)
 	if r.Interface != "" {
 		r.Listeners = findListeners(parsed)
+	} else {
+		// Routes are only meaningful for addresses not assigned to a local interface.
+		r.Routes = findRoutes(parsed)
 	}
 
 	if r.Hostname != "" {
@@ -208,6 +220,75 @@ func scanListeners(path, hexIP, wildcard string) []Listener {
 		})
 	}
 	return listeners
+}
+
+// findRoutes returns kernel routing table entries from /proc/net/route that
+// cover ip (IPv4 only; IPv6 routing table has a different format).
+func findRoutes(ip net.IP) []Route {
+	ip4 := ip.To4()
+	if ip4 == nil {
+		return nil
+	}
+	ipUint := uint32(ip4[0])<<24 | uint32(ip4[1])<<16 | uint32(ip4[2])<<8 | uint32(ip4[3])
+
+	f, err := os.Open("/proc/net/route")
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	var routes []Route
+	scanner := bufio.NewScanner(f)
+	scanner.Scan() // skip header
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 8 {
+			continue
+		}
+		dest, err := hexToIP(fields[1])
+		if err != nil {
+			continue
+		}
+		gw, err := hexToIP(fields[2])
+		if err != nil {
+			continue
+		}
+		mask, err := hexToIP(fields[7])
+		if err != nil {
+			continue
+		}
+		metric, _ := strconv.Atoi(fields[6])
+
+		destUint := uint32(dest[0])<<24 | uint32(dest[1])<<16 | uint32(dest[2])<<8 | uint32(dest[3])
+		maskUint := uint32(mask[0])<<24 | uint32(mask[1])<<16 | uint32(mask[2])<<8 | uint32(mask[3])
+		if ipUint&maskUint != destUint {
+			continue
+		}
+
+		network := (&net.IPNet{IP: net.IP(dest), Mask: net.IPMask(mask)}).String()
+		gwStr := ""
+		if gw[0] != 0 || gw[1] != 0 || gw[2] != 0 || gw[3] != 0 {
+			gwStr = net.IP(gw).String()
+		}
+		routes = append(routes, Route{
+			Interface: fields[0],
+			Network:   network,
+			Gateway:   gwStr,
+			Metric:    metric,
+		})
+	}
+	return routes
+}
+
+// hexToIP parses a little-endian 32-bit hex string (as used in /proc/net/route)
+// into a net.IP.
+func hexToIP(s string) (net.IP, error) {
+	n, err := strconv.ParseUint(s, 16, 32)
+	if err != nil {
+		return nil, err
+	}
+	v := uint32(n)
+	return net.IP{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}, nil
 }
 
 func inodeToPID(inode uint64) (int, error) {

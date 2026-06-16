@@ -14,26 +14,28 @@ import (
 	"time"
 )
 
-// Result holds information about the process listening on a TCP port.
+// Result holds information about the process listening on a TCP or UDP port.
 type Result struct {
-	Summary    string
-	Port       int
-	PID        int
-	Process    string
-	User       string
-	Command    string
-	CWD        string
-	StartedAgo time.Duration
+	Summary     string
+	Port        int
+	Protocol    string // "tcp" or "udp"
+	ServiceName string // well-known name, e.g. "http", "ssh"
+	PID         int
+	Process     string
+	User        string
+	Command     string
+	CWD         string
+	StartedAgo  time.Duration
 }
 
-// Resolve looks up the process owning the given TCP port.
+// Resolve looks up the process owning the given TCP or UDP port.
 func Resolve(input string) (*Result, error) {
 	port, err := strconv.Atoi(input)
 	if err != nil || port < 1 || port > 65535 {
 		return nil, fmt.Errorf("port: invalid input %q", input)
 	}
 
-	inode, err := findSocketInode(port)
+	inode, proto, err := findSocketInode(port)
 	if err != nil {
 		return nil, err
 	}
@@ -43,19 +45,20 @@ func Resolve(input string) (*Result, error) {
 		return nil, fmt.Errorf("port %d: %w", port, err)
 	}
 
-	r := &Result{Port: port, PID: pid}
+	r := &Result{Port: port, PID: pid, Protocol: proto}
+	r.ServiceName = wellKnownService(port)
 	r.Process = readComm(pid)
 	r.User = readUser(pid)
 	r.Command = strings.TrimSpace(readCmdline(pid))
 	r.CWD = readCWD(pid)
 	r.StartedAgo = readStartedAgo(pid)
-	r.Summary = fmt.Sprintf("port %d — %s (pid %d)", port, r.Process, pid)
+	r.Summary = fmt.Sprintf("port %d/%s — %s (pid %d)", port, proto, r.Process, pid)
 	return r, nil
 }
 
-// findSocketInode searches /proc/net/tcp and /proc/net/tcp6 for a socket bound
-// to port and returns its inode.
-func findSocketInode(port int) (uint64, error) {
+// findSocketInode searches /proc/net/tcp[6] then /proc/net/udp[6] for a socket
+// bound to port and returns its inode and protocol ("tcp" or "udp").
+func findSocketInode(port int) (uint64, string, error) {
 	hexPort := fmt.Sprintf("%04X", port)
 	for _, path := range []string{"/proc/net/tcp", "/proc/net/tcp6"} {
 		f, err := os.Open(path)
@@ -65,10 +68,48 @@ func findSocketInode(port int) (uint64, error) {
 		inode, err := parseNetTCP(f, hexPort)
 		f.Close()
 		if err == nil {
-			return inode, nil
+			return inode, "tcp", nil
 		}
 	}
-	return 0, fmt.Errorf("port %d: not listening", port)
+	for _, path := range []string{"/proc/net/udp", "/proc/net/udp6"} {
+		f, err := os.Open(path)
+		if err != nil {
+			continue
+		}
+		inode, err := parseNetTCP(f, hexPort)
+		f.Close()
+		if err == nil {
+			return inode, "udp", nil
+		}
+	}
+	return 0, "", fmt.Errorf("port %d: not listening", port)
+}
+
+// wellKnownService returns the conventional name for common port numbers.
+func wellKnownService(port int) string {
+	services := map[int]string{
+		20:    "ftp-data",
+		21:    "ftp",
+		22:    "ssh",
+		23:    "telnet",
+		25:    "smtp",
+		53:    "dns",
+		80:    "http",
+		110:   "pop3",
+		143:   "imap",
+		443:   "https",
+		465:   "smtps",
+		587:   "smtp-submission",
+		993:   "imaps",
+		995:   "pop3s",
+		3306:  "mysql",
+		5432:  "postgresql",
+		6379:  "redis",
+		8080:  "http-alt",
+		8443:  "https-alt",
+		27017: "mongodb",
+	}
+	return services[port]
 }
 
 // parseNetTCP scans a /proc/net/tcp[6] reader for a local address whose port

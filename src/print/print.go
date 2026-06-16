@@ -26,6 +26,7 @@ func PID(r *pid.Result) {
 		{Label: "Exe", Value: r.Exe},
 		{Label: "CWD", Value: r.CWD},
 		{Label: "Memory", Value: fmtMemory(r.MemoryRSS)},
+		{Label: "CPU", Value: fmtCPU(r.CPUPercent)},
 		{Label: "FDs", Value: fmtFDs(r.FDCount)},
 		{Label: "Started", Value: fmtStarted(r.StartedAgo)},
 	}
@@ -34,14 +35,19 @@ func PID(r *pid.Result) {
 
 // Port prints a port.Result to stdout.
 func Port(r *port.Result) {
+	title := fmt.Sprintf("PORT %d", r.Port)
+	if r.Protocol != "" {
+		title = fmt.Sprintf("PORT %d/%s", r.Port, r.Protocol)
+	}
 	rows := []format.Row{
+		{Label: "Service", Value: r.ServiceName},
 		{Label: "Process", Value: fmt.Sprintf("%s (pid %d)", r.Process, r.PID)},
 		{Label: "User", Value: r.User},
 		{Label: "Command", Value: r.Command},
 		{Label: "CWD", Value: r.CWD},
 		{Label: "Started", Value: fmtStarted(r.StartedAgo)},
 	}
-	format.Print(fmt.Sprintf("PORT %d", r.Port), rows)
+	format.Print(title, rows)
 }
 
 // Device prints a device.Result to stdout.
@@ -123,6 +129,7 @@ func IP(r *ip.Result) {
 		{Label: "Hostname", Value: r.Hostname},
 		{Label: "Interface", Value: r.Interface},
 		{Label: "Listeners", Value: fmtListeners(r.Listeners)},
+		{Label: "Routes", Value: fmtRoutes(r.Routes)},
 	}
 	format.Print(fmt.Sprintf("IP %s", r.IP), rows)
 }
@@ -199,4 +206,26 @@ func fmtFDs(n int) string {
 		return ""
 	}
 	return fmt.Sprintf("%d", n)
+}
+
+func fmtCPU(pct float64) string {
+	if pct <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("%.1f%%", pct)
+}
+
+func fmtRoutes(routes []ip.Route) string {
+	if len(routes) == 0 {
+		return ""
+	}
+	parts := make([]string, len(routes))
+	for i, r := range routes {
+		if r.Gateway != "" {
+			parts[i] = fmt.Sprintf("%s via %s (%s)", r.Network, r.Gateway, r.Interface)
+		} else {
+			parts[i] = fmt.Sprintf("%s direct (%s)", r.Network, r.Interface)
+		}
+	}
+	return strings.Join(parts, ", ")
 }

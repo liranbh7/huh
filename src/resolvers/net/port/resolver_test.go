@@ -64,3 +64,56 @@ func TestResolvePortNotListening(t *testing.T) {
 		t.Skip("port 1 happened to be in use; skipping")
 	}
 }
+
+func TestWellKnownService(t *testing.T) {
+	cases := []struct {
+		port int
+		want string
+	}{
+		{22, "ssh"},
+		{80, "http"},
+		{443, "https"},
+		{53, "dns"},
+		{21, "ftp"},
+		{25, "smtp"},
+		{3306, "mysql"},
+		{5432, "postgresql"},
+		{6379, "redis"},
+		{9999, ""},  // unknown port returns empty string
+		{0, ""},     // zero not in map
+		{65535, ""}, // max port not in map
+	}
+	for _, tc := range cases {
+		got := wellKnownService(tc.port)
+		if got != tc.want {
+			t.Errorf("wellKnownService(%d) = %q, want %q", tc.port, got, tc.want)
+		}
+	}
+}
+
+// TestParseNetTCPUDPFormat verifies that parseNetTCP handles UDP /proc/net/udp
+// data, which uses the same column layout as /proc/net/tcp.
+func TestParseNetTCPUDPFormat(t *testing.T) {
+	sampleNetUDP := `  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000:0035 00000000:0000 07 00000000:00000000 00:00000000 00000000   101        0 55555 2 0000000000000000 0
+   1: 0100007F:14E9 00000000:0000 07 00000000:00000000 00:00000000 00000000  1000        0 77777 2 0000000000000000 0`
+	tests := []struct {
+		hexPort   string
+		wantInode uint64
+		wantErr   bool
+	}{
+		{"0035", 55555, false}, // port 53 (dns)
+		{"14E9", 77777, false}, // port 5353
+		{"0050", 0, true},      // port 80, not present
+	}
+	for _, tt := range tests {
+		inode, err := parseNetTCP(strings.NewReader(sampleNetUDP), tt.hexPort)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("parseNetTCP(%q) error = %v, wantErr %v", tt.hexPort, err, tt.wantErr)
+			continue
+		}
+		if !tt.wantErr && inode != tt.wantInode {
+			t.Errorf("parseNetTCP(%q) inode = %d, want %d", tt.hexPort, inode, tt.wantInode)
+		}
+	}
+}
