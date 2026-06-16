@@ -9,7 +9,7 @@ No flags, no manuals needed — just `huh <thing>` and get a human-readable summ
 
 ## Installation
 
-**Requirements:** Go 1.21+
+**Requirements:** Go 1.22+
 
 ```bash
 git clone https://github.com/liranbh7/huh
@@ -100,12 +100,12 @@ BINARY rsync
 
 | Input type    | Detection method                      | Info sources                             |
 | ------------- | ------------------------------------- | ---------------------------------------- |
-| Port number   | Numeric, 1–65535                      | `/proc/net/tcp`, `ss`, `lsof`            |
-| PID           | Numeric, matches `/proc/<n>`          | `/proc/<pid>/status`, `cmdline`, `fd`    |
-| Process name  | String matching running process names | `/proc/*/comm`, `systemctl`              |
-| File / device | Path exists on filesystem             | `stat`, `lsblk`, `findmnt`, `smartctl`   |
-| Binary        | Found in `$PATH`                      | `which`, `ldd`, `man`, `--version`       |
-| IP address    | Parses as IPv4 or IPv6                | `net.LookupAddr`, `/proc/net` interfaces |
+| Port number   | Numeric, 1–65535                      | `/proc/net/tcp`, `/proc/net/udp`                   |
+| PID           | Numeric, matches `/proc/<n>`          | `/proc/<pid>/status`, `cmdline`, `stat`, `fd`      |
+| Process name  | String matching running process names | `pgrep` (falls back to `/proc/*/comm`), `systemctl` |
+| File / device | Path exists on filesystem             | `stat`, `lsblk`, `findmnt`, `smartctl`              |
+| Binary        | Found in `$PATH`                      | `which`, `ldd`, `whatis`                            |
+| IP address    | Parses as IPv4 or IPv6                | `net.LookupAddr`, `/proc/net`, `/proc/net/route`   |
 
 ## Goals
 
@@ -118,13 +118,14 @@ BINARY rsync
 
 `huh` works on any Linux distro that provides `/proc`. Some resolvers depend on external tools that may not be present on every system:
 
-| Tool               | Used for                 | Availability                                                                              |
-| ------------------ | ------------------------ | ----------------------------------------------------------------------------------------- |
-| `lsblk`, `findmnt` | Device resolver          | Part of `util-linux`; present on most mainstream distros, may be absent on Alpine/BusyBox |
-| `smartctl`         | Device health (SMART)    | From `smartmontools`; often not installed by default                                      |
-| `systemctl`        | Process → service lookup | Systemd only; absent on Alpine, Void, Gentoo/OpenRC, etc.                                 |
-| `whatis`           | Binary man page summary  | From `man-db`; may be missing on minimal installs                                         |
-| `ldd`              | Binary linked libraries  | Part of glibc; present on virtually all distros                                           |
+| Tool               | Used for                           | Availability                                                                              |
+| ------------------ | ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| `pgrep`            | Process name → PID lookup (fast path) | Part of `procps`; present on virtually all distros; falls back to `/proc` walk if absent |
+| `lsblk`, `findmnt` | Device resolver                   | Part of `util-linux`; present on most mainstream distros, may be absent on Alpine/BusyBox |
+| `smartctl`         | Device health (SMART)              | From `smartmontools`; often not installed by default                                      |
+| `systemctl`        | Process → service lookup           | Systemd only; absent on Alpine, Void, Gentoo/OpenRC, etc.                                 |
+| `whatis`           | Binary man page summary            | From `man-db`; may be missing on minimal installs                                         |
+| `ldd`              | Binary linked libraries            | Part of glibc; present on virtually all distros                                           |
 
 Missing tools are detected at runtime via `PATH` lookup — the affected field is skipped rather than causing an error. Core functionality (port, PID, process name, binary path) works on any standard Linux system.
 

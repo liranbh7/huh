@@ -5,13 +5,14 @@
 package device
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/liranbh7/huh/src/internal/procfs"
 )
 
 // Result holds information about a filesystem path.
@@ -54,8 +55,8 @@ func Resolve(input string) (*Result, error) {
 	}
 
 	if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
-		r.Owner = lookupIDFile("/etc/passwd", fmt.Sprintf("%d", stat.Uid))
-		r.Group = lookupIDFile("/etc/group", fmt.Sprintf("%d", stat.Gid))
+		r.Owner = procfs.LookupIDFile("/etc/passwd", fmt.Sprintf("%d", stat.Uid))
+		r.Group = procfs.LookupIDFile("/etc/group", fmt.Sprintf("%d", stat.Gid))
 	}
 
 	if fi.Mode()&os.ModeSymlink != 0 {
@@ -181,22 +182,4 @@ func runSmartctl(path string) string {
 		}
 	}
 	return ""
-}
-
-// lookupIDFile looks up a numeric ID in an /etc/passwd- or /etc/group-style
-// file and returns the name in field 0. Falls back to returning id unchanged.
-func lookupIDFile(path, id string) string {
-	f, err := os.Open(path)
-	if err != nil {
-		return id
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		parts := strings.SplitN(scanner.Text(), ":", 4)
-		if len(parts) >= 3 && parts[2] == id {
-			return parts[0]
-		}
-	}
-	return id
 }

@@ -10,3 +10,8 @@ test:
 
 lint:
 	cd $(SRC) && go vet ./...
+
+all:
+	$(MAKE) build
+	$(MAKE) test
+	$(MAKE) lint

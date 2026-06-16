@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/liranbh7/huh/src/internal/procfs"
 )
 
 // Result holds information about an IP address.
@@ -37,6 +38,18 @@ type Route struct {
 	Network   string // CIDR notation, e.g. "192.168.1.0/24"
 	Gateway   string // empty if directly connected
 	Metric    int
+}
+
+// privateRanges holds pre-parsed RFC 1918 / RFC 4193 CIDR blocks.
+var privateRanges []*net.IPNet
+
+func init() {
+	for _, cidr := range []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"} {
+		_, network, err := net.ParseCIDR(cidr)
+		if err == nil {
+			privateRanges = append(privateRanges, network)
+		}
+	}
 }
 
 // Resolve inspects the given IP address string and returns metadata about it.
@@ -90,16 +103,8 @@ func classify(ip net.IP) string {
 	}
 }
 
-// isPrivate reports whether ip falls in RFC 1918 / RFC 4193 private ranges.
 func isPrivate(ip net.IP) bool {
-	private4 := []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
-	private6 := []string{"fc00::/7"}
-	ranges := append(private4, private6...)
-	for _, cidr := range ranges {
-		_, network, err := net.ParseCIDR(cidr)
-		if err != nil {
-			continue
-		}
+	for _, network := range privateRanges {
 		if network.Contains(ip) {
 			return true
 		}
@@ -188,7 +193,6 @@ func scanListeners(path, hexIP, wildcard string) []Listener {
 		if len(fields) < 10 {
 			continue
 		}
-		// fields[3] is the state; 0A = TCP_LISTEN
 		if !strings.EqualFold(fields[3], "0A") {
 			continue
 		}
@@ -209,14 +213,14 @@ func scanListeners(path, hexIP, wildcard string) []Listener {
 		if err != nil {
 			continue
 		}
-		pid, err := inodeToPID(inode)
+		pid, err := procfs.InodeToPID(inode)
 		if err != nil {
 			continue
 		}
 		listeners = append(listeners, Listener{
 			Port:    int(port),
 			PID:     pid,
-			Process: readComm(pid),
+			Process: procfs.ReadComm(pid),
 		})
 	}
 	return listeners
@@ -289,38 +293,4 @@ func hexToIP(s string) (net.IP, error) {
 	}
 	v := uint32(n)
 	return net.IP{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}, nil
-}
-
-func inodeToPID(inode uint64) (int, error) {
-	target := fmt.Sprintf("socket:[%d]", inode)
-	entries, err := os.ReadDir("/proc")
-	if err != nil {
-		return 0, err
-	}
-	for _, entry := range entries {
-		pid, err := strconv.Atoi(entry.Name())
-		if err != nil {
-			continue
-		}
-		fdDir := fmt.Sprintf("/proc/%d/fd", pid)
-		fds, err := os.ReadDir(fdDir)
-		if err != nil {
-			continue
-		}
-		for _, fd := range fds {
-			link, err := os.Readlink(filepath.Join(fdDir, fd.Name()))
-			if err == nil && link == target {
-				return pid, nil
-			}
-		}
-	}
-	return 0, fmt.Errorf("no process owns inode %d", inode)
-}
-
-func readComm(pid int) string {
-	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", pid))
-	if err != nil {
-		return "unknown"
-	}
-	return strings.TrimSpace(string(data))
 }

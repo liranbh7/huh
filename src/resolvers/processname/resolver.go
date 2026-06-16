@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/liranbh7/huh/src/internal/procfs"
 )
 
 // Instance represents one running process with the given comm name.
@@ -58,12 +60,53 @@ func Resolve(input string) (*Result, error) {
 	return r, nil
 }
 
+// findInstances returns all running processes whose comm matches name.
+// It tries pgrep first for speed; falls back to a /proc walk if pgrep is
+// unavailable or returns an error.
 func findInstances(name string) []Instance {
+	pids, ok := pidsFromPgrep(name)
+	if !ok {
+		pids = pidsFromProc(name)
+	}
+
+	instances := make([]Instance, 0, len(pids))
+	for _, pid := range pids {
+		status := procfs.ReadStatus(pid)
+		instances = append(instances, Instance{
+			PID:     pid,
+			User:    procfs.ParseUser(status),
+			State:   procfs.ParseState(status),
+			Command: procfs.ReadCmdline(pid),
+			Exe:     procfs.ReadExe(pid),
+		})
+	}
+	sort.Slice(instances, func(i, j int) bool { return instances[i].PID < instances[j].PID })
+	return instances
+}
+
+// pidsFromPgrep runs "pgrep -x <name>" and returns (pids, true) on success.
+// Returns (nil, false) when pgrep is unavailable or exits with an error.
+func pidsFromPgrep(name string) ([]int, bool) {
+	out, err := exec.Command("pgrep", "-x", name).Output()
+	if err != nil {
+		return nil, false
+	}
+	var pids []int
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if pid, err := strconv.Atoi(strings.TrimSpace(line)); err == nil {
+			pids = append(pids, pid)
+		}
+	}
+	return pids, true
+}
+
+// pidsFromProc walks /proc/*/comm to find PIDs whose comm matches name.
+func pidsFromProc(name string) []int {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return nil
 	}
-	var instances []Instance
+	var pids []int
 	for _, entry := range entries {
 		pid, err := strconv.Atoi(entry.Name())
 		if err != nil {
@@ -73,81 +116,11 @@ func findInstances(name string) []Instance {
 		if err != nil {
 			continue
 		}
-		if strings.TrimSpace(string(comm)) != name {
-			continue
-		}
-		inst := Instance{PID: pid}
-		inst.User = readUser(pid)
-		inst.State = readState(pid)
-		inst.Command = readCmdline(pid)
-		inst.Exe = readExe(pid)
-		instances = append(instances, inst)
-	}
-	return instances
-}
-
-func readUser(pid int) string {
-	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
-	if err != nil {
-		return ""
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		if strings.HasPrefix(line, "Uid:") {
-			fields := strings.Fields(line)
-			if len(fields) >= 2 {
-				return uidToName(fields[1])
-			}
+		if strings.TrimSpace(string(comm)) == name {
+			pids = append(pids, pid)
 		}
 	}
-	return ""
-}
-
-func readState(pid int) string {
-	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
-	if err != nil {
-		return ""
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		if strings.HasPrefix(line, "State:") {
-			fields := strings.Fields(line)
-			if len(fields) >= 3 {
-				return strings.Trim(strings.Join(fields[2:], " "), "()")
-			}
-		}
-	}
-	return ""
-}
-
-func readCmdline(pid int) string {
-	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(strings.ReplaceAll(string(data), "\x00", " "))
-}
-
-func readExe(pid int) string {
-	link, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
-	if err != nil {
-		return ""
-	}
-	return link
-}
-
-func uidToName(uid string) string {
-	f, err := os.Open("/etc/passwd")
-	if err != nil {
-		return uid
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		parts := strings.SplitN(scanner.Text(), ":", 4)
-		if len(parts) >= 3 && parts[2] == uid {
-			return parts[0]
-		}
-	}
-	return uid
+	return pids
 }
 
 func pidListeningPorts(pids []int) []int {
